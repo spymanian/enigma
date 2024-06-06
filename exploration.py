@@ -43,6 +43,8 @@ class IcosahedronGraph:
         self._connect_rooms()
         self._add_npcs_and_items()
         self._set_random_crime_scene()
+        self.murderer = self._set_random_murderer()
+        self.report_item = random.choice(self._get_all_items())
 
     def _connect_rooms(self):
         # Manually connect rooms to form an icosahedron graph
@@ -63,20 +65,29 @@ class IcosahedronGraph:
             self.rooms[a].connect(self.rooms[b])
 
     def _add_npcs_and_items(self):
-        npcs = [f"NPC {i+1}" for i in range(5)]
-        items = [f"Item {i+1}" for i in range(8)]
+        self.npcs = [f"NPC {i+1}" for i in range(5)]
+        self.items = [f"Item {i+1}" for i in range(8)]
         
-        for npc in npcs:
+        for npc in self.npcs:
             room = random.choice(self.rooms)
             room.add_npc(npc)
         
-        for item in items:
+        for item in self.items:
             room = random.choice(self.rooms)
             room.add_item(item)
 
     def _set_random_crime_scene(self):
         crime_scene_room = random.choice(self.rooms)
         crime_scene_room.set_crime_scene()
+    
+    def _set_random_murderer(self):
+        return random.choice(self.npcs)
+
+    def _get_all_items(self):
+        items = []
+        for room in self.rooms:
+            items.extend(room.items)
+        return items
 
     def navigate(self):
         current_room = self.rooms[0]
@@ -102,6 +113,7 @@ class IcosahedronGraph:
             print("2. Examine items")
             print("3. Take an item")
             print("4. View inventory")
+            print("5. Report the crime")
             print("q. Quit")
 
             action = input("Choose an action: ")
@@ -134,9 +146,15 @@ class IcosahedronGraph:
                     print("Inventory:")
                     for item in inventory:
                         print(f" - {item}")
+            elif action == '5':
+                if self.report_item in inventory:
+                    print("You use the report item to report the crime.")
+                    print(f"The murderer is {self.murderer}!")
+                    break
+                else:
+                    print(f"You need the {self.report_item} to report the crime.")
             else:
                 print("Invalid action. Please try again.")
 
 if __name__ == "__main__":
-    graph = IcosahedronGraph()
-    graph.navigate()
+    IcosahedronGraph().navigate()
