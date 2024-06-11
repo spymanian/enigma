@@ -1,4 +1,13 @@
 import random
+from openai import OpenAI
+import openai
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+client = OpenAI(api_key = os.environ.get("MY_API_KEY"),
+)
+
 
 class Room:
     def __init__(self, description):
@@ -89,6 +98,16 @@ class IcosahedronGraph:
             items.extend(room.items)
         return items
 
+    def _interact_with_npc(self, npc):
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an NPC in a murder mystery game."},
+                {"role": "user", "content": f"Describe your interaction with the player as {npc}."}
+            ]
+        )
+        print(response.choices[0].message.content)
+
     def navigate(self):
         current_room = self.rooms[0]
         inventory = []
@@ -113,7 +132,8 @@ class IcosahedronGraph:
             print("2. Examine items")
             print("3. Take an item")
             print("4. View inventory")
-            print("5. Report the crime")
+            print("5. Interact with an NPC")
+            print("6. Report the crime")
             print("q. Quit")
 
             action = input("Choose an action: ")
@@ -147,6 +167,22 @@ class IcosahedronGraph:
                     for item in inventory:
                         print(f" - {item}")
             elif action == '5':
+                if current_room.npcs:
+                    print("Which NPC do you want to interact with?")
+                    for i, npc in enumerate(current_room.npcs):
+                        print(f"{i + 1}. {npc}")
+                    choice = input("Choose an NPC to interact with: ")
+                    try:
+                        index = int(choice) - 1
+                        if 0 <= index < len(current_room.npcs):
+                            self._interact_with_npc(current_room.npcs[index])
+                        else:
+                            print("Invalid choice. Try again.")
+                    except ValueError:
+                        print("Invalid input. Please enter a number.")
+                else:
+                    print("There are no NPCs to interact with in this room.")
+            elif action == '6':
                 if self.report_item in inventory:
                     print("You use the report item to report the crime.")
                     print(f"The murderer is {self.murderer}!")
