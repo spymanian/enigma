@@ -17,6 +17,7 @@ class Room:
         self.is_crime_scene = False
         self.report_item = report_item
         self.murderer = murderer
+        self.visited = False  # Add visited attribute
 
     def connect(self, other_room):
         self.connections.append(other_room)
@@ -41,7 +42,7 @@ class Room:
                     model="gpt-4",
                     messages=[
                         {"role": "system", "content": "You are a player in a murder mystery game. However, do not mention you are part of a game."},
-                        {"role": "user", "content": f"Describe the appearance and any evidence that can pinpoint the murderer for the item: {item}. Try to relate the description to the murder item: {self.report_item} and the murderer: {self.murderer}. Do not reveal the murderer or the murder item. Be subtle about the murder item and do not directly name if the {item} that you are examining is not the murder item."}
+                        {"role": "user", "content": f"Describe the appearance and any evidence that can pinpoint the murderer for the item: {item}. Try to relate the description to the murder item: {self.report_item} and the murderer: {self.murderer}. Do not reveal the murderer or the murder item. Be subtle about the murder item and do not directly name if the {item} that you are examining is not the murder item. Make it at most one to two sentences."}
                     ]
                 )
                 print(response.choices[0].message.content)
@@ -78,8 +79,9 @@ class IcosahedronGraph:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": f"Generate {count} unique {category} based on the theme '{self.theme}'."}
-            ]
+                {"role": "system", "content": f"Generate {count} unique {category} based on the theme '{self.theme}'."},
+                {"role": "user", "content": "Make room and item names different and distinct names to avoid confusion for player."}
+                ]
         )
         raw_names = response.choices[0].message.content.strip().split('\n')
         cleaned_names = [name.split('. ', 1)[-1].strip().strip("-").strip("'\"").strip() for name in raw_names if name.strip()]     
@@ -129,7 +131,7 @@ class IcosahedronGraph:
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "In the second person point of view as the player, describe an NPC interaction in a murder mystery game."},
-                {"role": "user", "content": f"Describe the interaction with {npc} in one or two sentences"}
+                {"role": "user", "content": f"Describe the interaction with {npc} in one or two sentences and make it so that it clues the player into getting a little more info on the murderer {self.murderer} and the murder weapon{self.report_item}. Be very subtle with the messaging to the player, so as to not reveal the murderer and murder weapon"}
             ]
         )
         print(response.choices[0].message.content)
@@ -139,7 +141,7 @@ class IcosahedronGraph:
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a player in a murder mystery game."},
-                {"role": "user", "content": f"Introduce the player in the second person point of view as an investigator named {self.name} for a themed house that just had a murder of a John Doe. The theme is {self.theme}."}
+                {"role": "user", "content": f"Introduce the player in the second person point of view as an investigator named {self.name} for a themed house that just had a murder of a John Doe. The theme is {self.theme}. Explain that the house is shaped like icosahedron with 12 rooms and 30 different paths. Make it one to two sentences."}
             ]
         )
         print(response.choices[0].message.content)
@@ -147,6 +149,7 @@ class IcosahedronGraph:
     def navigate(self):
         self._generate_intro()
         current_room = self.rooms[0]
+        current_room.visited = True
         inventory = []
 
         while True:
@@ -179,12 +182,13 @@ class IcosahedronGraph:
             elif action == '1':
                 print("Which room do you want to go to next? \nRooms:")
                 for i, room in enumerate(current_room.connections):
-                    print(f"{i + 1}. {room.description}")
+                    print(f"{i + 1}. {room.description if room.visited else 'Unexplored Room'}")
                 choice = input("Choose a room to move to: ")
                 try:
                     index = int(choice) - 1
                     if 0 <= index < len(current_room.connections):
                         current_room = current_room.connections[index]
+                        current_room.visited = True
                     else:
                         print("Invalid choice. Try again.")
                 except ValueError:
