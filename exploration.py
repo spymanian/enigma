@@ -220,12 +220,14 @@ class IcosahedronGraph:
                 else:
                     print("There are no NPCs to interact with in this room.")
             elif action == '6':
-                if self.report_item in inventory:
-                    print("You use the report item to report the crime.")
-                    print(f"The murderer is {self.murderer}!")
+                murderer_guess = input("Enter the name of the murderer: ")
+                item_guess = input("Enter the name of the item you think is the murder weapon: ")
+                if murderer_guess == self.murderer and item_guess in inventory:
+                    print("You correctly identified the murderer and the murder weapon!")
+                    print(f"The murderer is {self.murderer} and the murder weapon is {item_guess}!")
                     break
                 else:
-                    print(f"You need the {self.report_item} to report the crime.")
+                    print("Incorrect guess. Either the murderer or the item is wrong. Try again.")
             else:
                 print("Invalid action. Please try again.")
 
