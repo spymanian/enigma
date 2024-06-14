@@ -35,6 +35,14 @@ class Room:
         else:
             for item in self.items:
                 print(f"You examine the {item}.")
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "You are a player in a murder mystery game."},
+                        {"role": "user", "content": f"Describe the appearance and any evidence that can pinpoint the murderer for the item: {item}"}
+                    ]
+                )
+                print(response.choices[0].message.content)
 
     def take_item(self, item_name):
         for item in self.items:
@@ -122,7 +130,7 @@ class IcosahedronGraph:
         inventory = []
 
         while True:
-            print("You are currently in the "+ current_room.description)
+            print("You are currently in the " + current_room.description)
             
             if current_room.is_crime_scene:
                 print("This room is a CRIME SCENE.")
