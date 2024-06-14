@@ -8,7 +8,6 @@ load_dotenv()
 client = OpenAI(api_key = os.environ.get("MY_API_KEY"),
 )
 
-
 class Room:
     def __init__(self, description):
         self.description = description
@@ -47,16 +46,29 @@ class Room:
         return None
 
 class IcosahedronGraph:
-    def __init__(self):
-        self.rooms = [Room(f"Room {i+1}") for i in range(12)]
+    def __init__(self, theme):
+        self.theme = theme
+        self.rooms = [Room(name) for name in self._generate_names("room names", 12)]
         self._connect_rooms()
+        self.npcs = self._generate_names("NPC names", 5)
+        self.items = self._generate_names("item names", 8)
         self._add_npcs_and_items()
         self._set_random_crime_scene()
         self.murderer = self._set_random_murderer()
         self.report_item = random.choice(self._get_all_items())
 
+    def _generate_names(self, category, count):
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": f"Generate {count} unique {category} based on the theme '{self.theme}'."}
+            ]
+        )
+        raw_names = response.choices[0].message.content.strip().split('\n')
+        cleaned_names = [name.split('. ', 1)[-1].strip().strip("-").strip("'\"").strip() for name in raw_names if name.strip()]     
+        return cleaned_names
+
     def _connect_rooms(self):
-        # Manually connect rooms to form an icosahedron graph
         connections = [
             (0, 1), (0, 2), (0, 3), (0, 4), (0, 5), 
             (1, 2), (1, 5), (1, 6), (1, 7), 
@@ -74,9 +86,6 @@ class IcosahedronGraph:
             self.rooms[a].connect(self.rooms[b])
 
     def _add_npcs_and_items(self):
-        self.npcs = [f"NPC {i+1}" for i in range(5)]
-        self.items = [f"Item {i+1}" for i in range(8)]
-        
         for npc in self.npcs:
             room = random.choice(self.rooms)
             room.add_npc(npc)
@@ -102,8 +111,8 @@ class IcosahedronGraph:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an NPC in a murder mystery game."},
-                {"role": "user", "content": f"Describe your interaction with the player as {npc}."}
+                {"role": "system", "content": "In the second person point of view as the player, describe an NPC interaction in a murder mystery game."},
+                {"role": "user", "content": f"Describe the interaction with {npc} in one or two sentences"}
             ]
         )
         print(response.choices[0].message.content)
@@ -113,7 +122,7 @@ class IcosahedronGraph:
         inventory = []
 
         while True:
-            print(current_room.description)
+            print("You are currently in the "+ current_room.description)
             
             if current_room.is_crime_scene:
                 print("This room is a CRIME SCENE.")
@@ -193,4 +202,5 @@ class IcosahedronGraph:
                 print("Invalid action. Please try again.")
 
 if __name__ == "__main__":
-    IcosahedronGraph().navigate()
+    theme = input("Enter a theme for the game: ")
+    IcosahedronGraph(theme).navigate()
