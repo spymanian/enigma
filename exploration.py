@@ -9,12 +9,14 @@ client = OpenAI(api_key = os.environ.get("MY_API_KEY"),
 )
 
 class Room:
-    def __init__(self, description):
+    def __init__(self, description, report_item=None, murderer=None):
         self.description = description
         self.connections = []
         self.npcs = []
         self.items = []
         self.is_crime_scene = False
+        self.report_item = report_item
+        self.murderer = murderer
 
     def connect(self, other_room):
         self.connections.append(other_room)
@@ -38,8 +40,8 @@ class Room:
                 response = client.chat.completions.create(
                     model="gpt-4",
                     messages=[
-                        {"role": "system", "content": "You are a player in a murder mystery game."},
-                        {"role": "user", "content": f"Describe the appearance and any evidence that can pinpoint the murderer for the item: {item}"}
+                        {"role": "system", "content": "You are a player in a murder mystery game. However, do not mention you are part of a game."},
+                        {"role": "user", "content": f"Describe the appearance and any evidence that can pinpoint the murderer for the item: {item}. Try to relate the description to the murder item: {self.report_item} and the murderer: {self.murderer}. Do not reveal the murderer or the murder item. Be subtle about the murder item and do not directly name if the {item} that you are examining is not the murder item."}
                     ]
                 )
                 print(response.choices[0].message.content)
@@ -56,6 +58,7 @@ class Room:
 class IcosahedronGraph:
     def __init__(self, theme):
         self.theme = theme
+        self.name = name
         self.rooms = [Room(name) for name in self._generate_names("room names", 12)]
         self._connect_rooms()
         self.npcs = self._generate_names("NPC names", 5)
@@ -64,6 +67,12 @@ class IcosahedronGraph:
         self._set_random_crime_scene()
         self.murderer = self._set_random_murderer()
         self.report_item = random.choice(self._get_all_items())
+        self._assign_crime_info()
+
+    def _assign_crime_info(self):
+        for room in self.rooms:
+            room.report_item = self.report_item
+            room.murderer = self.murderer
 
     def _generate_names(self, category, count):
         response = client.chat.completions.create(
@@ -124,8 +133,19 @@ class IcosahedronGraph:
             ]
         )
         print(response.choices[0].message.content)
+    
+    def _generate_intro(self):
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a player in a murder mystery game."},
+                {"role": "user", "content": f"Introduce the player in the second person point of view as an investigator named {self.name} for a themed house that just had a murder of a John Doe. The theme is {self.theme}."}
+            ]
+        )
+        print(response.choices[0].message.content)
 
     def navigate(self):
+        self._generate_intro()
         current_room = self.rooms[0]
         inventory = []
 
@@ -210,5 +230,6 @@ class IcosahedronGraph:
                 print("Invalid action. Please try again.")
 
 if __name__ == "__main__":
+    name = input("What is your name? ")
     theme = input("Enter a theme for the game: ")
     IcosahedronGraph(theme).navigate()
