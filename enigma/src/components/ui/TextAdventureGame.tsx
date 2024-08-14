@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, ChangeEvent, KeyboardEvent } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, TextField, Card, CardContent, Typography } from '@mui/material';
+import axios from 'axios';
 
 interface LogEntry {
     input: string;
@@ -9,32 +10,40 @@ interface LogEntry {
 }
 
 const TextAdventureGame: React.FC = () => {
-    const [story, setStory] = useState<string>("You find yourself in a dark forest. Paths lead to the north and south.");
+    const [story, setStory] = useState<string>("");
     const [input, setInput] = useState<string>("");
     const [log, setLog] = useState<LogEntry[]>([]);
 
-    const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    useEffect(() => {
+        const startGame = async () => {
+            const name = prompt("What is your name?") || "Player";
+            const theme = prompt("Enter a theme for the game:") || "Default Theme";
+            const response = await axios.post('/start', { name, theme });
+            setStory(response.data.story);
+        };
+        startGame();
+    }, []);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
         setInput(e.target.value);
     };
 
-    const handleInputSubmit = (): void => {
+    const handleInputSubmit = async (): Promise<void> => {
         if (input.trim() === "") return;
-
-        let newStory = story;
-        if (input.toLowerCase() === "north") {
-            newStory = "You walk north and find a clearing with a pond.";
-        } else if (input.toLowerCase() === "south") {
-            newStory = "You head south and stumble upon a small village.";
-        } else {
-            newStory = "You can't go that way.";
+    
+        try {
+            const response = await axios.post('/input', { input });
+            const newStory = response.data.story;
+    
+            setLog([...log, { input, story: newStory }]);
+            setStory(newStory);
+            setInput("");
+        } catch (error) {
+            console.error("Failed to submit input:", error);
         }
-
-        setLog([...log, { input, story: newStory }]);
-        setStory(newStory);
-        setInput("");
     };
-
-    const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>): void => {
+    
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
         if (e.key === 'Enter') {
             handleInputSubmit();
         }
@@ -44,7 +53,7 @@ const TextAdventureGame: React.FC = () => {
         <Card>
             <CardContent>
                 <div>
-                    <Typography variant="h4">Text Adventure Game</Typography>
+                    <Typography variant="h4">Let's Start!</Typography>
                     <Typography variant="body1">{story}</Typography>
                     <TextField 
                         value={input}
