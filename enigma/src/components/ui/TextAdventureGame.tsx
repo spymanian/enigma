@@ -1,82 +1,62 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Button, TextField, Card, CardContent, Typography } from '@mui/material';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { Input } from "@/components/ui/input"; // Import the Input component
+import { Button } from "@/components/ui/button"; // Import the Button component
 
-interface LogEntry {
-    input: string;
-    story: string;
-}
+const TextAdventureGame = () => {
+  const [messages, setMessages] = useState<{ sender: string, text: string }[]>([]);
+  const [currentMessage, setCurrentMessage] = useState("");
 
-const TextAdventureGame: React.FC = () => {
-    const [story, setStory] = useState<string>("");
-    const [input, setInput] = useState<string>("");
-    const [log, setLog] = useState<LogEntry[]>([]);
+  const handleSendMessage = () => {
+    if (currentMessage.trim() !== "") {
+      // Add the player's message
+      setMessages([...messages, { sender: "Human", text: currentMessage }]);
+      // Clear the input field
+      setCurrentMessage("");
 
-    useEffect(() => {
-        const startGame = async () => {
-            const name = prompt("What is your name?") || "Player";
-            const theme = prompt("Enter a theme for the game:") || "Default Theme";
-            const response = await axios.post('/start', { name, theme });
-            setStory(response.data.story);
-        };
-        startGame();
-    }, []);
+      // Add a response from the narrator
+      setTimeout(() => {
+        setMessages(prevMessages => [
+          ...prevMessages,
+          { sender: "Narrator", text: "The narrator responds to your action." }
+        ]);
+      }, 500); // Delay to simulate processing time
+    }
+  };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-        setInput(e.target.value);
-    };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+        {messages.map((message, index) => (
+          <div key={index} style={{ marginBottom: '8px' }}>
+            <strong>{message.sender}:</strong> {message.text}
+          </div>
+        ))}
+      </div>
 
-    const handleInputSubmit = async (): Promise<void> => {
-        if (input.trim() === "") return;
-    
-        try {
-            const response = await axios.post('/input', { input });
-            const newStory = response.data.story;
-    
-            setLog([...log, { input, story: newStory }]);
-            setStory(newStory);
-            setInput("");
-        } catch (error) {
-            console.error("Failed to submit input:", error);
-        }
-    };
-    
-    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-        if (e.key === 'Enter') {
-            handleInputSubmit();
-        }
-    };
-
-    return (
-        <Card>
-            <CardContent>
-                <div>
-                    <Typography variant="h4">Let's Start!</Typography>
-                    <Typography variant="body1">{story}</Typography>
-                    <TextField 
-                        value={input}
-                        onChange={handleInputChange}
-                        onKeyPress={handleKeyPress}
-                        placeholder="What do you want to do?"
-                        fullWidth
-                        margin="normal"
-                    />
-                    <Button variant="contained" color="primary" onClick={handleInputSubmit}>Submit</Button>
-                </div>
-                <div>
-                    <Typography variant="h5">Adventure Log</Typography>
-                    {log.map((entry, index) => (
-                        <div key={index}>
-                            <Typography variant="body2"><strong>Command:</strong> {entry.input}</Typography>
-                            <Typography variant="body2"><strong>Result:</strong> {entry.story}</Typography>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    );
+      <div style={{
+        position: 'sticky',
+        bottom: 0,
+        width: '100%',
+        backgroundColor: '#0000',
+        padding: '16px',
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <Input
+          type="text"
+          placeholder="Enter your text"
+          value={currentMessage}
+          onChange={(e) => setCurrentMessage(e.target.value)}
+          style={{ flex: 1, marginRight: '8px' }}
+        />
+        <Button onClick={handleSendMessage}>Submit</Button>
+      </div>
+    </div>
+  );
 };
 
 export default TextAdventureGame;
