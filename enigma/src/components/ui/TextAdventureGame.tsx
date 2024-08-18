@@ -19,7 +19,7 @@ const TextAdventureGame = () => {
       setTimeout(() => {
         setMessages(prevMessages => [
           ...prevMessages,
-          { sender: "Narrator", text: "The narrator responds to your action." }
+          { sender: "Narrator", text: currentMessage }
         ]);
       }, 500); // Delay to simulate processing time
     }
