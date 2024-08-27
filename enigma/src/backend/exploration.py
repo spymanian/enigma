@@ -146,62 +146,97 @@ class IcosahedronGraph:
         )
         print(response.choices[0].message.content)
 
-    def navigate(self, action=None):
-        if action is None:
-            return self._generate_intro()
-
-        response = ""
-        current_room = self.rooms[0] if not hasattr(self, 'current_room') else self.current_room
+    def navigate(self):
+        self._generate_intro()
+        current_room = self.rooms[0]
         current_room.visited = True
-        inventory = [] if not hasattr(self, 'inventory') else self.inventory
+        inventory = []
 
-        if action == '1':
-            # Room navigation logic
-            response += "Which room do you want to go to next? \nRooms:\n"
-            for i, room in enumerate(current_room.connections):
-                response += f"{i + 1}. {room.description if room.visited else 'Unexplored Room'}\n"
-        elif action == '2':
-            # Examine items
-            response += current_room.examine_items()
-        elif action == '3':
-        # Take an item
-            item_name = input("Enter the name of the item you want to take: ")
-            item = current_room.take_item(item_name)
-            if item:
-                inventory.append(item)
-        elif action == '4':
-        # View inventory
-            if not inventory:
-                response += "Your inventory is empty."
-            else:
-                response += "Inventory:\n"
-                for item in inventory:
-                    response += f" - {item}\n"
-        elif action == '5':
-        # Interact with an NPC
+        while True:
+            print("You are currently in the " + current_room.description)
+            
+            if current_room.is_crime_scene:
+                print("This room is a CRIME SCENE.")
+            
             if current_room.npcs:
-                response += "Which NPC do you want to interact with?\n"
-                for i, npc in enumerate(current_room.npcs):
-                    response += f"{i + 1}. {npc}\n"
-            else:
-                response += "There are no NPCs to interact with in this room."
-        elif action == '6':
-        # Report the crime
-            murderer_guess = input("Enter the name of the murderer: ")
-            item_guess = input("Enter the name of the item you think is the murder weapon: ")
-            if murderer_guess == self.murderer and item_guess in inventory:
-                response += f"You correctly identified the murderer and the murder weapon! The murderer is {self.murderer} and the murder weapon is {item_guess}!"
-            else:
-                response += "Incorrect guess. Either the murderer or the item is wrong. Try again."
-        else:
-            response += "Invalid action. Please try again."
+                print("NPCs in the room:")
+                for npc in current_room.npcs:
+                    print(f" - {npc}")
+            if current_room.items:
+                print("Items in the room:")
+                for item in current_room.items:
+                    print(f" - {item}")
 
-        self.current_room = current_room
-        self.inventory = inventory
-        return response
+            print("\nAvailable actions:")
+            print("1. Move to another room")
+            print("2. Examine items")
+            print("3. Take an item")
+            print("4. View inventory")
+            print("5. Interact with an NPC")
+            print("6. Report the crime")
+            print("q. Quit")
 
+            action = input("Choose an action: ")
+            if action == 'q':
+                break
+            elif action == '1':
+                print("Which room do you want to go to next? \nRooms:")
+                for i, room in enumerate(current_room.connections):
+                    print(f"{i + 1}. {room.description if room.visited else 'Unexplored Room'}")
+                choice = input("Choose a room to move to: ")
+                try:
+                    index = int(choice) - 1
+                    if 0 <= index < len(current_room.connections):
+                        current_room = current_room.connections[index]
+                        current_room.visited = True
+                    else:
+                        print("Invalid choice. Try again.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+            elif action == '2':
+                current_room.examine_items()
+            elif action == '3':
+                item_name = input("Enter the name of the item you want to take: ")
+                item = current_room.take_item(item_name)
+                if item:
+                    inventory.append(item)
+            elif action == '4':
+                if not inventory:
+                    print("Your inventory is empty.")
+                else:
+                    print("Inventory:")
+                    for item in inventory:
+                        print(f" - {item}")
+            elif action == '5':
+                if current_room.npcs:
+                    print("Which NPC do you want to interact with?")
+                    for i, npc in enumerate(current_room.npcs):
+                        print(f"{i + 1}. {npc}")
+                    choice = input("Choose an NPC to interact with: ")
+                    try:
+                        index = int(choice) - 1
+                        if 0 <= index < len(current_room.npcs):
+                            self._interact_with_npc(current_room.npcs[index])
+                        else:
+                            print("Invalid choice. Try again.")
+                    except ValueError:
+                        print("Invalid input. Please enter a number.")
+                else:
+                    print("There are no NPCs to interact with in this room.")
+            elif action == '6':
+                murderer_guess = input("Enter the name of the murderer: ")
+                item_guess = input("Enter the name of the item you think is the murder weapon: ")
+                if murderer_guess == self.murderer and item_guess in inventory:
+                    print("You correctly identified the murderer and the murder weapon!")
+                    print(f"The murderer is {self.murderer} and the murder weapon is {item_guess}!")
+                    break
+                else:
+                    print("Incorrect guess. Either the murderer or the item is wrong. Try again.")
+            else:
+                print("Invalid action. Please try again.")
 
 if __name__ == "__main__":
     name = input("What is your name? ")
     theme = input("Enter a theme for the game: ")
     IcosahedronGraph(theme).navigate()
+    
