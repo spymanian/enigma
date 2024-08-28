@@ -40,6 +40,17 @@ class Room {
         }
     }
 
+    takeItem() {
+        if (this.item) {
+            const item = this.item;
+            this.item = null;
+            return item;
+        } else {
+            console.log("There is nothing to take here.");
+            return null;
+        }
+    }
+
     talkToNPC() {
         if (this.npc) {
             console.log(`You talk to ${this.npc.name}.`);
@@ -80,6 +91,9 @@ class Game {
         this.rooms = [];
         this.npcs = [];
         this.items = [];
+        this.murderer = null;
+        this.murderWeapon = null;
+        this.inventory = [];
     }
 
     async initializeRooms() {
@@ -90,11 +104,12 @@ class Game {
                 {
                     role: "user",
                     content: `Generate 12 unique room names based on the theme "${this.theme}". These names should evoke the theme and fit well in a mysterious or fantastical setting. Do not number them.
-                    USE THIS PARSING CODE:
-                           const roomNames = roomCompletion.choices[0].message['content'].split('\n').map(name => name.trim()).filter(name => name);
+                    
+                    parse with this:
+                            const roomNames = roomCompletion.choices[0].message['content'].split('\n').map(name => name.trim()).filter(name => name);
         for (let i = 0; i < 12; i++) {
-            this.rooms.push(new Room(roomNames[i] || Room {i + 1}));}
-                    `
+            this.rooms.push(new Room(roomNames[i] || Room{i + 1}));
+        }`,
                 },
             ],
         });
@@ -116,19 +131,18 @@ class Game {
         const npcCompletion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
-                { role: "system", content: "You are a game master for a murder mystery game" },
+                { role: "system", content: "You are a game master for a murder mystery game." },
                 {
                     role: "user",
-                    content: `Generate 8 unique NPC names based on the theme "${this.theme}". Each should have a name and an associated quote.
-
-                    USE THIS PARSING CODE:
+                    content: `Generate 8 unique NPC names based on the theme "${this.theme}". Each should have a name and an associated quote. do not number the items
+                    
+                    
+                    parse with this:
                             const npcData = npcCompletion.choices[0].message['content'].split('\n').map(line => line.trim()).filter(line => line);
         for (let i = 0; i < 8; i++) {
             const [name, quote] = npcData[i].split(':').map(part => part.trim());
             this.npcs.push(new NPC(name, quote));
-        }
-                    
-                    `
+        }`,
                 },
             ],
         });
@@ -139,9 +153,9 @@ class Game {
             this.npcs.push(new NPC(name, quote));
         }
 
-        // Randomly select one NPC as the murderer
         const murdererIndex = Math.floor(Math.random() * this.npcs.length);
         this.npcs[murdererIndex].isMurderer = true;
+        this.murderer = this.npcs[murdererIndex];
 
         this.assignNPCsToRooms();
     }
@@ -153,16 +167,16 @@ class Game {
                 { role: "system", content: "You are a game master for a murder mystery game." },
                 {
                     role: "user",
-                    content: `Generate 8 unique item names and descriptions based on the theme "${this.theme}". One of these items should be the murder weapon.
-                    USE THIS PARSING CODE:
-                            const itemData = itemCompletion.choices[0].message['content'].split('\n').map(line => line.trim()).filter(line => line);
+                    content: `Generate 8 unique item names and descriptions based on the theme "${this.theme}". One of these items should be the murder weapon. do not number the items
+                    
+                    parse with this:
+                    
+        const itemData = itemCompletion.choices[0].message['content'].split('\n').map(line => line.trim()).filter(line => line);
         for (let i = 0; i < 8; i++) {
             const [name, description] = itemData[i].split(':').map(part => part.trim());
             this.items.push(new Item(name, description));
         }
-
-                    
-                    `
+`,
                 },
             ],
         });
@@ -173,9 +187,9 @@ class Game {
             this.items.push(new Item(name, description));
         }
 
-        // Randomly select one item as the murder weapon
         const murderWeaponIndex = Math.floor(Math.random() * this.items.length);
         this.items[murderWeaponIndex].isMurderWeapon = true;
+        this.murderWeapon = this.items[murderWeaponIndex];
 
         this.assignItemsToRooms();
     }
@@ -183,14 +197,18 @@ class Game {
     assignNPCsToRooms() {
         const shuffledRooms = this.rooms.slice().sort(() => 0.5 - Math.random());
         this.npcs.forEach((npc, index) => {
-            shuffledRooms[index].setNPC(npc);
+            if (shuffledRooms[index]) {
+                shuffledRooms[index].setNPC(npc);
+            }
         });
     }
 
     assignItemsToRooms() {
         const shuffledRooms = this.rooms.slice().sort(() => 0.5 - Math.random());
         this.items.forEach((item, index) => {
-            shuffledRooms[index].setItem(item);
+            if (shuffledRooms[index]) {
+                shuffledRooms[index].setItem(item);
+            }
         });
     }
 
@@ -233,7 +251,7 @@ class Game {
             console.log(`${index + 1}. ${room.visited ? room.description : 'Unexplored Room'}`);
         });
 
-        const choice = await question("Choose a room to move to (enter the number, 'e' to examine the room, 't' to talk to the NPC, 'l' to list NPCs and items in all rooms, or 'q' to quit): ");
+        const choice = await question("Choose a room to move to (enter the number, 'e' to examine the room, 't' to talk to the NPC, 'l' to list NPCs and items in all rooms, 'take' to take the item, 'report' to report the NPC and item, or 'q' to quit): ");
         
         if (choice.toLowerCase() === 'q') {
             console.log("Quitting the game. Goodbye!");
@@ -245,6 +263,14 @@ class Game {
             this.currentRoom.talkToNPC();
         } else if (choice.toLowerCase() === 'l') {
             this.listRoomsWithNPCsAndItems();
+        } else if (choice.toLowerCase() === 'take') {
+            const item = this.currentRoom.takeItem();
+            if (item) {
+                this.inventory.push(item);
+                console.log(`You have taken ${item.name}.`);
+            }
+        } else if (choice.toLowerCase() === 'report') {
+            await this.report();
         } else {
             const index = parseInt(choice, 10) - 1;
             
@@ -257,6 +283,41 @@ class Game {
             }
         }
     }
+
+    async report() {
+        const npcName = await question("Who do you think the murderer is? ");
+        const itemName = await question("What do you think the murder weapon is? ");
+
+        const murdererMatch = this.npcs.find(npc => npc.name.toLowerCase() === npcName.toLowerCase());
+        const itemMatch = this.inventory.find(item => item.name.toLowerCase() === itemName.toLowerCase());
+
+        if (murdererMatch && itemMatch) {
+            if (murdererMatch.isMurderer && itemMatch.isMurderWeapon) {
+                console.log("Congratulations! You've solved the murder mystery!");
+                rl.close();
+                process.exit(0);
+            } else {
+                console.log("That's not correct. Keep investigating.");
+            }
+        } else {
+            console.log("You need to investigate more to make a correct accusation.");
+        }
+    }
+
+    async generateIntroduction(name) {
+        const introCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                { role: "system", content: "You are a mastermind in a murder mystery game." },
+                {
+                    role: "user",
+                    content: `Introduce the player in the second person point of view as an investigator named ${name} for a themed house that just had a murder of a John Doe. The theme is ${this.theme}. The murderer is ${this.murderer.name}, and the murder weapon is ${this.murderWeapon.name}. Subtly explain that the house is shaped like an icosahedron with 12 rooms and 30 different paths and make it more descriptive to capture an audience's attention. Make it one to two sentences.`,
+                },
+            ],
+        });
+
+        console.log(introCompletion.choices[0].message['content']);
+    }
 }
 
 async function main() {
@@ -264,21 +325,9 @@ async function main() {
         const name = await question("What's your name? ");
         const theme = await question("What's the theme of the game? ");
         
-        const introCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                { role: "system", content: "You are a mastermind in a murder mystery game." },
-                {
-                    role: "user",
-                    content: `Introduce the player in the second person point of view as an investigator named ${name} for a themed house that just had a murder of a John Doe. The theme is ${theme}. Subtlely Explain that the house is shaped like an icosahedron with 12 rooms and 30 different paths and make it more descriptive it capture an audience's attention. Make it one to two sentences.`,
-                },
-            ],
-        });
-
-        console.log(introCompletion.choices[0].message['content']);
-        
         const game = new Game(theme);
         await game.initializeRooms();
+        await game.generateIntroduction(name);
         
         while (true) {
             await game.moveToNextRoom();
