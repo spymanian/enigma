@@ -4,6 +4,11 @@ import React, { useState } from 'react';
 import { Input } from "@/components/ui/input"; // Import the Input component
 import { Button } from "@/components/ui/button"; // Import the Button component
 
+const name = window.prompt("What is your name?")
+const themeName = window.prompt("What is your theme for the game?")
+alert(name)
+alert(themeName)
+
 const TextAdventureGame = () => {
   const [messages, setMessages] = useState<{ sender: string, text: string }[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
